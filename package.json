@@ -1,0 +1,19 @@
+{
+  "name": "assignment2",
+  "version": "1.0.0",
+  "description": "Assignment 2+",
+  "main": "web322-app/server.js",
+  "scripts": {
+    "a2": "node web322-app/server.js"
+  },
+  "keywords": [
+    "Assignments",
+    "WEB322"
+  ],
+  "author": "Nathan Polak",
+  "license": "ISC",
+  "dependencies": {
+    "expres": "^0.0.5",
+    "express": "^4.19.2"
+  }
+}
