@@ -21,7 +21,7 @@ function initialize() {
                     return reject(err.message);
                 }
                 categories = JSON.parse(data);
-                
+
                 // Resolves
                 resolve();
             });
@@ -35,7 +35,44 @@ function getAllItems() {
             return reject("Items has not been initialized");
         }
         else {
-            resolve(items);
+            return resolve(items);
+        }
+    });
+}
+
+function getItemsByCategory(category) {
+    return new Promise((resolve, reject) => {
+        if (category < 0 || category > categories.length) {
+            return reject("Invalid category: " + category);
+        } else {
+            const filteredItems = items.filter(item => item.category == category);
+            if (filteredItems.length > 0) {
+                return resolve(filteredItems);
+            } else {
+                return reject("No items found in category: " + category);
+            }
+        }
+    });
+}
+
+function getItemsByMinDate(minDateStr) {
+    return new Promise((resolve, reject) => {
+        const filteredItems = items.filter(item => item.postDate >= minDateStr);
+        if (filteredItems.length > 0) {
+            return resolve(filteredItems);
+        } else {
+            return reject("No items found after this date str: " + minDateStr);
+        }
+    });
+}
+
+function getItemById(id) {
+    return new Promise((resolve, reject) => {
+        const item = items.filter(item => item.id == id);
+        if (item.length === 0 || item === undefined) {
+            return reject("Item of id \'" + id + "\' not found");
+        } else {
+            return resolve(item);
         }
     });
 }
@@ -43,7 +80,7 @@ function getAllItems() {
 function getPublishedItems() {
     return new Promise((resolve, reject) => {
         if (items.length === 0) {
-            return reject("Categories has not been initialized");
+            return reject("Items has not been initialized");
         }
         else {
             resolve(items.filter(item => item.published === true));
@@ -62,4 +99,18 @@ function getCategories() {
     });
 }
 
-module.exports = { initialize, getAllItems, getPublishedItems, getCategories };
+function addItem(itemData) {
+    return new Promise((resolve, reject) => {
+        if (itemData.published === undefined) {
+            itemData.published = false;
+        } else {
+            itemData.published = true;
+        }
+
+        itemData.id = itemData.length + 1;
+        items.push(itemData);
+        resolve();
+    });
+}
+
+module.exports = { initialize, getAllItems, getItemsByCategory, getItemsByMinDate, getItemById, getPublishedItems, getCategories, addItem };

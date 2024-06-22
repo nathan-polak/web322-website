@@ -5,12 +5,13 @@ been copied manually or electronically from any other source (including 3rd part
 Name: Nathan Polak
 Student ID: 188243216
 Date: June 7th, 2024
-Cyclic Web App URL: _______________________________________________________
+Cyclic Web App URL: https://web322-website-nathan-polaks-projects.vercel.app/ (It doesn't work because Vercel's pulling a Vercel)
 GitHub Repository URL: https://github.senecapolytechnic.ca/npolak/web322
-********************************************************************************/ 
+GitHub Personal Repository (I'm sorry, Vercel wouldn't take my Seneca account) URL: https://github.com/nathan-polak/web322
+********************************************************************************/
 
 // Requires store-service.js
-const {initialize, getAllItems, getPublishedItems, getCategories} = require("./store-service.js");
+const { initialize, getAllItems, getItemsByCategory, getItemsByMinDate, getItemById, getPublishedItems, getCategories, addItem } = require("./store-service.js");
 
 // Express module
 const express = require("express");
@@ -21,6 +22,22 @@ const path = require("path");
 
 // Fs moudle
 const fs = require("fs");
+
+// Multer module
+const multer = require('multer');
+const upload = multer(); // no {storage: storage}
+
+// Cloudinary module
+const cloudinary = require('cloudinary').v2;
+cloudinary.config({
+    cloud_name: 'dcstvcloe',
+    api_key: 'API-FirstKey',
+    api_secret: 'tMiK6heFqIZ6D8yM6y4ZmhqpL7c',
+    secure: true
+});
+
+// Streamifier module
+const streamifier = require('streamifier');
 
 // HTTP Port
 const HTTP_PORT = process.env.PORT || 8080;
@@ -45,25 +62,103 @@ app.get("/about", (req, res) => {
 app.get("/shop", (req, res) => {
     getPublishedItems().then(data => {
         res.json(data);
-    }).then((err) => {
+    }).catch((err) => {
         res.status(500).send(err);
     })
 });
 
 // Sends items file
 app.get("/items", (req, res) => {
-    getAllItems().then(data => {
+    const category = req.query.category;
+    const minDateStr = req.query.minDate;
+    //console.log("category: " + category);
+    //console.log("midDateStr: " + minDateStr);
+
+    if (category) {
+        //console.log("category search");
+        getItemsByCategory(category).then(data => {
+            res.json(data);
+        }).catch((err) => {
+            res.status(500).send(err);
+        });
+    }
+    else if (minDateStr) {
+        //console.log("date search");
+        getItemsByMinDate(minDateStr).then(data => {
+            res.json(data);
+        }).catch((err) => {
+            res.status(500).send(err);
+        });
+    } else {
+        //console.log("all search");
+        getAllItems().then(data => {
+            res.json(data);
+        }).catch((err) => {
+            res.status(500).send(err);
+        });
+    }
+});
+
+// Sends specific file
+app.get("/items/:id", (req, res) => {
+    const id = req.params.id;
+
+    getItemById(id).then(data => {
         res.json(data);
-    }).then((err) => {
-        res.status(500).send(err);
+    }).catch((err) => {
+        res.status(404).send(err);
     });
+});
+
+// Sends to addItem page
+app.get("/add-item", (req, res) => {
+    res.sendFile(path.resolve(__dirname, "../views/addItem.html"));
+})
+
+// Posts item to items page
+app.post("/items/add", (req, res) => {
+    if (req.file) {
+        let streamUpload = (req) => {
+            return new Promise((resolve, reject) => {
+                let stream = cloudinary.uploader.upload_stream(
+                    (error, result) => {
+                        if (result) {
+                            resolve(result);
+                        } else {
+                            reject(error);
+                        }
+                    }
+                );
+                streamifier.createReadStream(req.file.buffer).pipe(stream);
+            });
+        };
+        async function upload(req) {
+            let result = await streamUpload(req);
+            console.log(result);
+            return result;
+        }
+        upload(req).then((uploaded) => {
+            processItem(uploaded.url);
+        });
+    } else {
+        processItem("");
+    }
+    function processItem(imageUrl) {
+        req.body.featureImage = imageUrl;
+        // TODO: Process the req.body and add it as a new Item before redirecting to /items
+
+        const itemData = JSON.stringify(req.body);
+        addItem(itemData).then(() => {
+            res.redirect("/items");
+        });
+    }
 });
 
 // Sends categories file
 app.get("/categories", (req, res) => {
     getCategories().then(data => {
         res.json(data);
-    }).then((err) => {
+    }).catch((err) => {
         res.status(500).send(err);
     });
 });
