@@ -24,3 +24,20 @@
     color: white;
     text-decoration: none;
 }
+
+table {
+    width: 100%;
+}
+
+thead, td {
+    padding: 8px;
+    text-align: left;
+}
+
+thead td {
+    font-weight: bold;
+}
+
+td {
+    border-bottom: 1px solid lightgray;
+}

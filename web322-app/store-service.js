@@ -108,9 +108,21 @@ function addItem(itemData) {
         }
 
         itemData.id = itemData.length + 1;
+        itemData.postDate = new Date().toISOString().split('T')[0];
         items.push(itemData);
         resolve();
     });
 }
 
-module.exports = { initialize, getAllItems, getItemsByCategory, getItemsByMinDate, getItemById, getPublishedItems, getCategories, addItem };
+function getPublishedItemsByCategory(category) {
+    return new Promise((resolve, reject) => {
+        if (items.length === 0) {
+            return reject("Items has not been initialized");
+        }
+        else {
+            resolve(items.filter(item => item.published === true && item.category === category));
+        }
+    });
+}
+
+module.exports = { initialize, getAllItems, getItemsByCategory, getItemsByMinDate, getItemById, getPublishedItems, getCategories, addItem, getPublishedItemsByCategory };
