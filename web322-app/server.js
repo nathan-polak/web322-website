@@ -1,14 +1,19 @@
 /*********************************************************************************
-WEB322 – Assignment 04
+WEB322 – Assignment 06
 I declare that this assignment is my own work in accordance with Seneca Academic Policy. No part * of this assignment has
 been copied manually or electronically from any other source (including 3rd party web sites) or distributed to other students.
 Name: Nathan Polak
 Student ID: 188243216
-Date: July 3rd, 2024
+Date: August 16th, 2024
 Cyclic Web App URL: https://web322-website-nathan-polaks-projects.vercel.app/ (It doesn't work because Vercel's pulling a Vercel)
 GitHub Repository URL: https://github.senecapolytechnic.ca/npolak/web322
 GitHub Personal Repository (I'm sorry, Vercel wouldn't take my Seneca account) URL: https://github.com/nathan-polak/web322
 ********************************************************************************/
+
+// Assignment 6
+const authData = require("./auth-service.js");
+const mongoose = require('mongoose');
+const clientSessions = require('client-sessions');
 
 // Requires store-service.js
 const itemData = require("./store-service.js");
@@ -81,10 +86,105 @@ app.use(function (req, res, next) {
     next();
 });
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(
+    clientSessions({
+        cookieName: 'NotADataStealer',
+        secret: 'a&n2Pu*2ndhHU33@@DfwMB92y3HDMMdvc&7373BEBhugc#^gsj*wj02ksvgci',
+        duration: 2 * 60 * 1000,
+        activeDuration: 1000 * 60,
+    })
+);
+app.use(function (req, res, next) {
+    res.locals.session = req.NotADataStealer;
+    next();
+});
+
+function ensureLogin(req, res, next) {
+    if (!req.NotADataStealer.user) {
+        res.redirect('/login');
+    } else {
+        next();
+    }
+}
+
+const requiresLogin = ['/items', '/categories', '/post', '/category', '/userHistory'];
+
+requiresLogin.forEach(route => {
+    app.use(`${route}`, ensureLogin);
+});
+
 // Redirects
 app.get("/", (req, res) => {
     res.redirect("/shop");
 });
+
+app.get("/login", (req, res) => {
+    res.render(path.resolve(__dirname, "../views/login.hbs"));
+});
+
+app.get("/register", (req, res) => {
+    res.render(path.resolve(__dirname, "../views/register.hbs"));
+});
+
+app.post("/register", (req, res) => {
+    authData.registerUser(req.body).then(() => {
+        res.render(path.resolve(__dirname, "../views/register.hbs"), { successMessage: "User created" })
+    }).catch((err) => {
+        res.render(path.resolve(__dirname, "../views/register.hbs"), { errorMessage: err, userName: req.body.userName })
+    });
+});
+
+app.post("/login", (req, res) => {
+    req.body.userAgent = req.get("User-Agent");
+
+    authData.checkUser(req.body).then((user) => {
+        const newUserSession = {
+            userName: user.userName,
+            email: user.email,
+            loginHistory: user.loginHistory
+        }
+
+        req.NotADataStealer.user = newUserSession;
+
+        res.redirect('/items');
+    }).catch((err) => {
+        res.render(path.resolve(__dirname, "../views/login.hbs"), { errorMessage: err, userName: req.body.userName })
+    });
+});
+
+app.get("/logout", (req, res) => {
+    req.NotADataStealer.reset();
+    res.redirect("/");
+});
+
+app.get("/userHistory", (req, res) => {
+    res.render(path.resolve(__dirname, "../views/userHistory.hbs"));
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Sends to about page
 app.get("/about", (req, res) => {
@@ -133,7 +233,7 @@ app.get("/shop", async (req, res) => {
     }
 
     // render the "shop" view with all of the data (viewData)
-    res.render("shop", { data: viewData });
+    res.render(path.resolve(__dirname, "../views/shop.hbs"), { data: viewData });
 });
 
 // Gets shop item by id
@@ -184,7 +284,7 @@ app.get('/shop/:id', async (req, res) => {
     }
 
     // render the "shop" view with all of the data (viewData)
-    res.render("shop", { data: viewData })
+    res.render(path.resolve(__dirname, "../views/shop.hbs"), { data: viewData })
 });
 
 // Sends items file
@@ -197,24 +297,24 @@ app.get("/items", (req, res) => {
     if (category) {
         //console.log("category search");
         itemData.getItemsByCategory(category).then(data => {
-            res.render("items", { items: data });
+            res.render(path.resolve(__dirname, "../views/items.hbs"), { items: data });
         }).catch((err) => {
-            res.status(500).render("posts", { message: err.message });
+            res.status(500).render(path.resolve(__dirname, "../views/items.hbs"), { message: err.message });
         });
     }
     else if (minDateStr) {
         //console.log("date search");
         itemData.getItemsByMinDate(minDateStr).then(data => {
-            res.render("items", { items: data });
+            res.render(path.resolve(__dirname, "../views/items.hbs"), { items: data });
         }).catch((err) => {
-            res.status(500).render("posts", { message: err.message });
+            res.status(500).render(path.resolve(__dirname, "../views/items.hbs"), { message: err.message });
         });
     } else {
         //console.log("all search");
         itemData.getAllItems().then(data => {
-            res.render("items", { items: data });
+            res.render(path.resolve(__dirname, "../views/items.hbs"), { items: data });
         }).catch((err) => {
-            res.status(500).render("posts", { message: err.message });
+            res.status(500).render(path.resolve(__dirname, "../views/items.hbs"), { message: err.message });
         });
     }
 });
@@ -224,14 +324,14 @@ app.get("/items/:id", (req, res) => {
     const id = req.params.id;
 
     itemData.getItemById(id).then(data => {
-        res.render("items", { items: data });
+        res.render(path.resolve(__dirname, "../views/items.hbs"), { items: data });
     }).catch((err) => {
-        res.status(500).render("posts", { message: err.message });
+        res.status(500).render(path.resolve(__dirname, "../views/items.hbs"), { message: err.message });
     });
 });
 
 // Sends to addItem page
-app.get("/add-item", (req, res) => {
+app.get("/add-items", (req, res) => {
     res.render(path.resolve(__dirname, "../views/addItem.hbs"));
 })
 
@@ -258,28 +358,88 @@ app.post("/items/add", (req, res) => {
             return result;
         }
         upload(req).then((uploaded) => {
-            processItem(uploaded.url);
+            processItem(uploaded.url, req, res);
         });
     } else {
-        processItem("");
+        processItem("", req, res);
     }
-    function processItem(imageUrl) {
-        req.body.featureImage = imageUrl;
-        // TODO: Process the req.body and add it as a new Item before redirecting to /items
+    function processItem(imageUrl, req, res) {
+        //res.json(req.body);
 
-        const itemData = JSON.stringify(req.body);
-        itemData.addItem(itemData).then(() => {
-            res.redirect("/items");
-        });
+        if (!req) {
+            throw new Error("No Request");
+        } else if (!req.body) {
+            throw new Error("No Request Body");
+        } else {
+            const newItem = {
+                featureImage: imageUrl,
+                title: req.body.title,
+                price: req.body.price,
+                published: req.body.published,
+                body: test
+            };
+
+            itemData.addItem(newItem).then(() => {
+                res.redirect("/items");
+            }).catch((err) => {
+                res.status(500);
+            });
+        }
     }
 });
 
 // Sends categories file
 app.get("/categories", (req, res) => {
     itemData.getCategories().then(data => {
-        res.render("categories", { categories: data });
+        res.render(path.resolve(__dirname, "../views/categories.hbs"), { categories: data });
     }).catch((err) => {
-        res.status(500).render("posts", { message: err.message });
+        res.status(500).render(path.resolve(__dirname, "../views/categories.hbs"), { message: err.message });
+    });
+});
+
+// Sends to get categories
+app.get("/categories/add", (req, res) => {
+    res.render(path.resolve(__dirname, "../views/addCategory.hbs"));
+});
+
+// Adds category
+app.post("/categories/add", (req, res) => {
+    if (!req) {
+        throw new Error("No Request");
+    } else if (!req.body) {
+        throw new Error("No Request Body");
+    } else {
+        const newCat = {
+            category: req.body.category
+        };
+
+        itemData.addCategory(newCat).then(() => {
+            res.redirect("/categories");
+        }).catch((err) => {
+            res.status(500);
+        });
+    }
+});
+
+// Sends categories file
+app.get("/categories/delete/:id", (req, res) => {
+    id = req.params.id;
+
+    itemData.deleteCategoryById(id).then((data) => {
+        res.render(path.resolve(__dirname, "../views/categories.hbs"), { categories: data });
+    }).catch(() => {
+        res.status(500).message("Unable to Remove Category / Category not found");
+    });
+});
+
+// Sends categories file
+app.get("/items/delete/:id", (req, res) => {
+    id = req.params.id;
+
+    itemData.deletePostById(id).then((data) => {
+        res.render("items", { items: data });
+    }).catch((err) => {
+        res.status(500).message("Unable to Remove Post / Item");
     });
 });
 
@@ -294,7 +454,7 @@ app.use((req, res) => {
 });
 
 // App listens to HTTP_PORT
-itemData.initialize().then(() => {
+itemData.initialize().then(authData.initialize()).then(() => {
     app.listen(HTTP_PORT, () => {
         console.log("Express http server listening on: " + HTTP_PORT);
     });

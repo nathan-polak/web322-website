@@ -1,3 +1,4 @@
+<a href="/categories/add" class="btn btn-success pull-right">Add Category</a>
 <div class="row">
     <div class="col-md-12">
         <h2>Categories</h2>
@@ -7,6 +8,7 @@
                 <tr>
                     <td>Category ID</td>
                     <td>Category Name</td>
+                    <td></td>
                 </tr>
             </thead>
             <tbody>
@@ -14,6 +16,7 @@
                 <tr>
                     <td><a href="/items?category={{this.id}}">{{this.id}}</a></td>
                     <td><a href="/items?category={{this.id}}">{{this.category}}</a></td>
+                    <td><button class="btn btn-danger"><a href="/categories/delete/{{this.id}}">Remove</a></button></td>
                 </tr>
                 {{else}}
                 <tr>
